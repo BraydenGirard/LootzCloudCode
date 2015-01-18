@@ -1,0 +1,11 @@
+{
+    "applications": {
+        "Lootz": {
+            "applicationId": "xMWHdAdDCH08EjLa8Ot10m8NHUF5Jib8TcJsvhL9", 
+            "masterKey": "gs6y48kNULSqsCExhjSbvSA0DRb26R5JsNI1KbdC"
+        }, 
+        "_default": {
+            "link": "Lootz"
+        }
+    }
+}
