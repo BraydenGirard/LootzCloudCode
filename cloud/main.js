@@ -3,50 +3,19 @@ Parse.Cloud.job("spawnChests", function(request, status) {
   var Chest = Parse.Object.extend("Chest");
   var result = [];
   var toSaves = [];
-  var chests = [];
-
-  var queryChestsCallback = function(res) {
-    console.log("Query found " + res.length + " item");
-    chests = chests.concat(res);
-    console.log("Result length after concat " + result.length);
-    if (res.length === 1000) {
-      queryChests(res[res.length-1].id);
-    }
-    else {
-      //Remove all chests
-      Parse.Object.destroyAll(chests, {
-        success: function(deleteList) {
-          console.log("All chests removed");
-          querySpawnLocations(false);
-        },
-        error: function(error) {
-          status.error("Unable to remove chests. Error is: " + error.message);
-        }
-      });
-    }
-  }
-
-  var queryChests = function(skip) {
-
-    var query = new Parse.Query("Chest");
-
-    if (skip) {
-      console.log("In if, more than 1000 objects, do skip");
-      query.greaterThan("objectId", skip);
-    }
-    query.limit(1000);
-    query.ascending("objectId");
-    query.find().then(function querySuccess(res) {
-      queryChestsCallback(res);
-    }, function queryFailed(reason) {
-      status.error("query unsuccessful, length of result " + result.length + ", error:" + error.code + " " + error.message);
-    });
-  }
+  var startIndex = 0;
+  var stopIndex = 1800;
+  var time;
 
   var querySpawnLocationsCallback = function(res) {
-    console.log("Query found " + res.length + " item");
-    result = result.concat(res);
-    console.log("Result length after concat " + result.length);
+    //console.log("Query found " + res.length + " item");
+    var spawnRandom = Math.floor(Math.random() * 3) + 1;
+
+    if(spawnRandom === 1) {
+      result = result.concat(res);
+    }
+
+    //console.log("Result length after concat " + result.length);
     if (res.length === 1000) {
       querySpawnLocations(res[res.length-1].id);
     }
@@ -60,7 +29,7 @@ Parse.Cloud.job("spawnChests", function(request, status) {
     var query = new Parse.Query("SpawnLocations");
 
     if (skip) {
-      console.log("In if, more than 1000 objects, do skip");
+      //console.log("In if, more than 1000 objects, do skip");
       query.greaterThan("objectId", skip);
     }
     query.limit(1000);
@@ -76,7 +45,7 @@ Parse.Cloud.job("spawnChests", function(request, status) {
     console.log("Result length is: " + result.length + " before the loop");
     //Loop for the number of total locations
     for(i=0; i<result.length; i++) {
-      console.log("In for loop, iteration: " + i);
+      //console.log("In for loop, iteration: " + i);
       var weaponRandom = Math.floor(Math.random() * 100) + 1;
       var goldRandom = Math.floor(Math.random() * 100) + 1;
       var otherRandom = Math.floor(Math.random() * 100) + 1;
@@ -160,20 +129,123 @@ Parse.Cloud.job("spawnChests", function(request, status) {
       //Push chest to array for saving
       toSaves.push(aChest);
 
-      console.log("Location of chest " + i + " " + toSaves[i].get("location"));
-      console.log("Amount of gold in chest " + i + " " + toSaves[i].get("gold"));
+      //console.log("Location of chest " + i + " " + toSaves[i].get("location"));
+      //console.log("Amount of gold in chest " + i + " " + toSaves[i].get("gold"));
 
     }
 
     console.log("Number of items to be saved: " + toSaves.length);
 
+    if(stopIndex >= toSave.length - 1) {
+      stopIndex = -1;
+      save();
+    }
+    else {
+      save();
+
+      time = new Date().getTime() / 1000
+
+      while(stopIndex < toSave.length - 1) {
+        if((time + 60) < (new Date().getTime() / 1000)) {
+          console.log("1 min wait complete");
+          time = new Date().getTime() / 1000;
+          save();
+        }
+      }
+      stopIndex = -1;
+      save();
+      }
+
+    status.success("All chests spawned");
+  }
+
+  function save() {
     //Save array of all chests
-    Parse.Object.saveAll(toSaves, {
+    Parse.Object.saveAll(toSaves.slice(startIndex, stopIndex), {
       success: function(saveList) {
-        status.success("All chests spawned");
+        if(stopIndex === -1) {
+          status.success("All chests spawned");
+        }
+        startIndex + 1800;
+        stopIndex + 1800;
       },
       error: function(error) {
         status.error("Unable to spawn chests. Error is: " + error.message);
+      }
+    });
+  }
+
+  querySpawnLocations(false);
+
+});
+
+Parse.Cloud.job("removeChests", function(request, status) {
+
+  var Chest = Parse.Object.extend("Chest");
+  var chests = [];
+  var startIndex = 0;
+  var stopIndex = 1800;
+  var time;
+
+  var queryChestsCallback = function(res) {
+
+    chests = chests.concat(res);
+
+    if (res.length === 1000) {
+      queryChests(res[res.length-1].id);
+    }
+    else {
+      if(stopIndex >= chests.length - 1) {
+        stopIndex = -1;
+        removeChests();
+      }
+      else {
+        removeChests();
+
+        time = new Date().getTime() / 1000
+
+        while(stopIndex < chests.length - 1) {
+          if((time + 60) < (new Date().getTime() / 1000)) {
+            console.log("1 min wait complete");
+            time = new Date().getTime() / 1000;
+            removeChests();
+          }
+        }
+        stopIndex = -1;
+        removeChests();
+        }
+    }
+  }
+
+  var queryChests = function(skip) {
+
+    var query = new Parse.Query("Chest");
+
+    if (skip) {
+      //console.log("In if, more than 1000 objects, do skip");
+      query.greaterThan("objectId", skip);
+    }
+    query.limit(1000);
+    query.ascending("objectId");
+    query.find().then(function querySuccess(res) {
+      queryChestsCallback(res);
+    }, function queryFailed(reason) {
+      status.error("query unsuccessful, length of result " + result.length + ", error:" + error.code + " " + error.message);
+    });
+  }
+
+  function removeChests() {
+    //Remove all chests
+    Parse.Object.destroyAll(chests.slice(startIndex, stopIndex), {
+      success: function(deleteList) {
+        if(stopIndex === -1) {
+          status.success("All chests removed");
+        }
+        startIndex + 1800;
+        stopIndex + 1800;
+      },
+      error: function(error) {
+        status.error("Unable to remove chests. Error is: " + error.message);
       }
     });
   }
