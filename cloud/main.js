@@ -1,127 +1,182 @@
-
-// Use Parse.Cloud.define to define as many cloud functions as you want.
-// For example:
-Parse.Cloud.define("hello", function(request, response) {
-  response.success("Hello world!");
-});
-
 Parse.Cloud.job("spawnChests", function(request, status) {
 
+  var Chest = Parse.Object.extend("Chest");
   var result = [];
+  var toSaves = [];
+  var chests = [];
 
-  var processCallback = function(res) {
-    result = result.concat(res);
+  var queryChestsCallback = function(res) {
+    console.log("Query found " + res.length + " item");
+    chests = chests.concat(res);
+    console.log("Result length after concat " + result.length);
     if (res.length === 1000) {
-      process(res[res.length-1].id);
-      return;
+      queryChests(res[res.length-1].id);
     }
-
-    // do something about the result, result is all the object you needed.
-    status.success("final length " + result.length);
+    else {
+      //Remove all chests
+      Parse.Object.destroyAll(chests, {
+        success: function(deleteList) {
+          console.log("All chests removed");
+          querySpawnLocations(false);
+        },
+        error: function(error) {
+          status.error("Unable to remove chests. Error is: " + error.message);
+        }
+      });
+    }
   }
-  var process = function(skip) {
 
-    var query = new Parse.Query("SpawnLocations");
+  var queryChests = function(skip) {
+
+    var query = new Parse.Query("Chest");
 
     if (skip) {
-      console.log("in if");
+      console.log("In if, more than 1000 objects, do skip");
       query.greaterThan("objectId", skip);
     }
     query.limit(1000);
     query.ascending("objectId");
     query.find().then(function querySuccess(res) {
-      processCallback(res);
+      queryChestsCallback(res);
     }, function queryFailed(reason) {
       status.error("query unsuccessful, length of result " + result.length + ", error:" + error.code + " " + error.message);
     });
   }
-  process(false);
 
-
-  var Chest = Parse.Object.extend("Chest");
-  var toSaves = [];
-
-  //Loop for the number of total locations
-  for(i=0; i<result.length; i++) {
-    var weaponRandom = Math.floor(Math.random() * 100) + 1;
-    var otherRandom = Math.floor(Math.random() * 100) + 1;
-    var aChest = new Chest();
-    aChest.set("location") = new Parse.GeoPoint({latitude: result[i].get("latitude"), longitude: result[i].get("longitude")});
-
-    if(weaponRandom < 5) {
-      //4% chance weapon random
-      var weaponUltraRareRandom = Math.floor(Math.random() * 4) + 1;
-
-      if(weaponUltraRareRandom === 1) {
-        //1% Staff
-      } else if(weaponUltraRareRandom === 2) {
-        //1% Axe
-      } else if(weaponUltraRareRandom === 3) {
-        //1% Armour
-      } else if(weaponUltraRareRandom === 4) {
-        //1% Long Shield
-      }
-    } else if(weaponRandom < 11) {
-      //6% chance weapon random
-      var weaponRareRandom = Math.floor(Math.random() * 3) + 1;
-
-      if(weaponRareRandom === 1) {
-        //2% Staff
-      } else if(weaponRareRandom === 2) {
-        //2% Axe
-      } else if(weaponRareRandom === 3) {
-        //2% Armour
-      }
-    } else if(weaponRandom < 19) {
-      //8% Sword
-    } else if(weaponRandom < 29) {
-      //10% Bow
-    } else if(weaponRandom < 41) {
-      //12% Dagger
-    } else if(weaponRandom < 61) {
-      //20% Spear
-    } else {
-      //40% Toy Sword
+  var querySpawnLocationsCallback = function(res) {
+    console.log("Query found " + res.length + " item");
+    result = result.concat(res);
+    console.log("Result length after concat " + result.length);
+    if (res.length === 1000) {
+      querySpawnLocations(res[res.length-1].id);
     }
-
-    if(otherRandom < 31) {
-      //30% chance potion
-      var potionRandom = Math.floor(Math.random() * 3) + 1;
-
-      if(potionRandom === 1) {
-        //10% Health
-      } else if(potionRandom === 2) {
-        //10% Energy
-      } else if(potionRandom === 3) {
-        //10% Armour
-      }
-    } else if(otherRandom < 61) {
-      //30% chance special item
-      var itemRandom = Math.floor(Math.random() * 3) + 1;
-
-      if(itemRandom === 1) {
-        //10% Map
-      } else if(itemRandom === 2) {
-        //10% Loot Bag
-      } else if(itemRandom === 3) {
-        //10% Bounty
-      }
-    } else {
-      //Nothing
-    }
-
-    //Push chest to array for saving
-    toSaves.push(aChest);
-  }
-
-  //Save array of all chests
-  Parse.Object.saveAll(toSaves, {
-    success: function(saveList) {
-      response.success("All chests spawned");
-    },
-    error: function(error) {
-      response.error("Unable to spawn chests.")
+    else {
+      rng();
     }
   }
 
+  var querySpawnLocations = function(skip) {
+
+    var query = new Parse.Query("SpawnLocations");
+
+    if (skip) {
+      console.log("In if, more than 1000 objects, do skip");
+      query.greaterThan("objectId", skip);
+    }
+    query.limit(1000);
+    query.ascending("objectId");
+    query.find().then(function querySuccess(res) {
+      querySpawnLocationsCallback(res);
+    }, function queryFailed(reason) {
+      status.error("query unsuccessful, length of result " + result.length + ", error:" + error.code + " " + error.message);
+    });
+  }
+
+  var rng = function() {
+    console.log("Result length is: " + result.length + " before the loop");
+    //Loop for the number of total locations
+    for(i=0; i<result.length; i++) {
+      console.log("In for loop, iteration: " + i);
+      var weaponRandom = Math.floor(Math.random() * 100) + 1;
+      var goldRandom = Math.floor(Math.random() * 100) + 1;
+      var otherRandom = Math.floor(Math.random() * 100) + 1;
+      var aChest = new Chest();
+      var geoPoint = new Parse.GeoPoint({latitude: result[i].get("latitude"), longitude: result[i].get("longitude")})
+      aChest.set("location", geoPoint);
+
+      if(weaponRandom < 5) {
+        //4% chance weapon random
+        var weaponUltraRareRandom = Math.floor(Math.random() * 4) + 1;
+
+        if(weaponUltraRareRandom === 1) {
+          //1% Staff
+          aChest.set("weapon", "Staff");
+        } else if(weaponUltraRareRandom === 2) {
+          //1% Axe
+          aChest.set("weapon", "Axe");
+        } else if(weaponUltraRareRandom === 3) {
+          //1% Armour
+          aChest.set("weapon", "Body_Armour");
+        } else if(weaponUltraRareRandom === 4) {
+          //1% Large Shield
+          aChest.set("weapon", "Large_Shield");
+        }
+      } else if(weaponRandom < 11) {
+        //6% chance weapon random
+        var weaponRareRandom = Math.floor(Math.random() * 3) + 1;
+
+        if(weaponRareRandom === 1) {
+          //2% Mace
+          aChest.set("weapon", "Mace");
+        } else if(weaponRareRandom === 2) {
+          //2% Helmet
+          aChest.set("weapon", "Helmet");
+        } else if(weaponRareRandom === 3) {
+          //2% Small Shield
+          aChest.set("weapon", "Small_Shield");
+        }
+      } else if(weaponRandom < 19) {
+        //8% Sword
+        aChest.set("weapon", "Sword");
+      } else if(weaponRandom < 29) {
+        //10% Bow
+        aChest.set("weapon", "Bow");
+      } else if(weaponRandom < 41) {
+        //12% Dagger
+        aChest.set("weapon", "Dagger");
+      } else if(weaponRandom < 61) {
+        //20% Spear
+        aChest.set("weapon", "Spear");
+      } else {
+        //40% Toy Sword
+        aChest.set("weapon", "Toy_Sword");
+      }
+
+      if(goldRandom < 3 && weaponRandom < 61) {
+        aChest.set("weaponGold", true);
+      }
+      else {
+        aChest.set("weaponGold", false);
+      }
+
+      if(otherRandom < 31) {
+        //30% chance potion
+        var potionRandom = Math.floor(Math.random() * 3) + 1;
+
+        if(potionRandom === 1) {
+          //10% Health
+          aChest.set("item", "Health_Potion");
+        } else if(potionRandom === 2) {
+          //10% Energy
+          aChest.set("item", "Energy_Potion");
+        } else if(potionRandom === 3) {
+          //10% Clarity
+          aChest.set("item", "Clarity_Potion");
+        }
+      }
+
+      aChest.set("gold", Math.floor(Math.random() * 100) + 1);
+
+      //Push chest to array for saving
+      toSaves.push(aChest);
+
+      console.log("Location of chest " + i + " " + toSaves[i].get("location"));
+      console.log("Amount of gold in chest " + i + " " + toSaves[i].get("gold"));
+
+    }
+
+    console.log("Number of items to be saved: " + toSaves.length);
+
+    //Save array of all chests
+    Parse.Object.saveAll(toSaves, {
+      success: function(saveList) {
+        status.success("All chests spawned");
+      },
+      error: function(error) {
+        status.error("Unable to spawn chests. Error is: " + error.message);
+      }
+    });
+  }
+
+  queryChests(false);
 });
