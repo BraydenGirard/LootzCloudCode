@@ -4,12 +4,12 @@ Parse.Cloud.job("spawnChests", function(request, status) {
   var result = [];
   var toSaves = [];
   var startIndex = 0;
-  var stopIndex = 1800;
+  var stopIndex = 40;
   var time;
 
   var querySpawnLocationsCallback = function(res) {
     //console.log("Query found " + res.length + " item");
-    var spawnRandom = Math.floor(Math.random() * 3) + 1;
+    var spawnRandom = Math.floor(Math.random() * 7) + 1;
 
     if(spawnRandom === 1) {
       result = result.concat(res);
@@ -136,43 +136,53 @@ Parse.Cloud.job("spawnChests", function(request, status) {
 
     console.log("Number of items to be saved: " + toSaves.length);
 
-    if(stopIndex >= toSave.length - 1) {
-      stopIndex = -1;
-      save();
+    if(stopIndex >= toSaves.length) {
+      stopIndex = toSaves.length;
+      saveChests();
     }
     else {
-      save();
-
       time = new Date().getTime() / 1000
-
-      while(stopIndex < toSave.length - 1) {
-        if((time + 60) < (new Date().getTime() / 1000)) {
-          console.log("1 min wait complete");
-          time = new Date().getTime() / 1000;
-          save();
-        }
-      }
-      stopIndex = -1;
-      save();
-      }
-
-    status.success("All chests spawned");
+      saveChests();
+    }
   }
 
-  function save() {
+   var saveChests = function() {
     //Save array of all chests
     Parse.Object.saveAll(toSaves.slice(startIndex, stopIndex), {
       success: function(saveList) {
-        if(stopIndex === -1) {
+        console.log("The start index is: " + startIndex + " and stop is: " + stopIndex);
+        console.log("There are: " + saveList.length + "items to save.");
+        if(stopIndex === toSaves.length) {
           status.success("All chests spawned");
         }
-        startIndex + 1800;
-        stopIndex + 1800;
+        else {
+          startIndex = startIndex + 40;
+          stopIndex = stopIndex + 40;
+          waitSave();
+        }
       },
       error: function(error) {
         status.error("Unable to spawn chests. Error is: " + error.message);
       }
     });
+  }
+
+  var waitSave = function () {
+    while(1===1) {
+      if((time + 2) < (new Date().getTime() / 1000)) {
+        console.log("1 min wait complete");
+        time = new Date().getTime() / 1000;
+        break;
+      }
+    }
+
+    if(stopIndex < toSaves.length) {
+      saveChests();
+    }
+    else {
+      stopIndex = toSaves.length;
+      saveChests();
+    }
   }
 
   querySpawnLocations(false);
@@ -184,7 +194,7 @@ Parse.Cloud.job("removeChests", function(request, status) {
   var Chest = Parse.Object.extend("Chest");
   var chests = [];
   var startIndex = 0;
-  var stopIndex = 1800;
+  var stopIndex = 40;
   var time;
 
   var queryChestsCallback = function(res) {
@@ -195,25 +205,14 @@ Parse.Cloud.job("removeChests", function(request, status) {
       queryChests(res[res.length-1].id);
     }
     else {
-      if(stopIndex >= chests.length - 1) {
-        stopIndex = -1;
+      if(stopIndex >= chests.length) {
+        stopIndex = chests.length;
         removeChests();
       }
       else {
-        removeChests();
-
         time = new Date().getTime() / 1000
-
-        while(stopIndex < chests.length - 1) {
-          if((time + 60) < (new Date().getTime() / 1000)) {
-            console.log("1 min wait complete");
-            time = new Date().getTime() / 1000;
-            removeChests();
-          }
-        }
-        stopIndex = -1;
         removeChests();
-        }
+      }
     }
   }
 
@@ -234,21 +233,42 @@ Parse.Cloud.job("removeChests", function(request, status) {
     });
   }
 
-  function removeChests() {
+  var removeChests = function () {
     //Remove all chests
     Parse.Object.destroyAll(chests.slice(startIndex, stopIndex), {
       success: function(deleteList) {
-        if(stopIndex === -1) {
+        if(stopIndex === chests.length) {
           status.success("All chests removed");
         }
-        startIndex + 1800;
-        stopIndex + 1800;
+        else {
+          startIndex = startIndex + 40;
+          stopIndex = stopIndex + 40;
+          waitRemove();
+        }
       },
       error: function(error) {
         status.error("Unable to remove chests. Error is: " + error.message);
       }
     });
   }
+
+  var waitRemove = function () {
+    while(1===1) {
+      if((time + 2) < (new Date().getTime() / 1000)) {
+        time = new Date().getTime() / 1000;
+        break;
+      }
+    }
+
+    if(stopIndex < chests.length) {
+      removeChests();
+    }
+    else {
+      stopIndex = chests.length;
+      removeChests();
+    }
+  }
+
 
   queryChests(false);
 });
