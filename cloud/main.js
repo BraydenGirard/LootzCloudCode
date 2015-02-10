@@ -50,7 +50,9 @@ Parse.Cloud.job("spawnChests", function(request, status) {
       var goldRandom = Math.floor(Math.random() * 100) + 1;
       var otherRandom = Math.floor(Math.random() * 100) + 1;
       var aChest = new Chest();
-      var geoPoint = new Parse.GeoPoint({latitude: result[i].get("latitude"), longitude: result[i].get("longitude")})
+
+      //Longitude and latitude reversed as they are backwards in the actual db
+      var geoPoint = new Parse.GeoPoint({latitude: result[i].get("longitude"), longitude: result[i].get("latitude")})
       aChest.set("location", geoPoint);
 
       if(weaponRandom < 5) {
