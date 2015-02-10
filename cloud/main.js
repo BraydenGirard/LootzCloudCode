@@ -123,6 +123,8 @@ Parse.Cloud.job("spawnChests", function(request, status) {
         } else if(potionRandom === 3) {
           //10% Clarity
           aChest.set("item", "Clarity_Potion");
+        } else {
+          aChest.set("item", "Empty");
         }
       }
 
